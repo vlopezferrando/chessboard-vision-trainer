@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Chess Square Color Game</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <style>
+      :root {
+        --light-square: #f0d9b5;
+        --dark-square: #b58863;
+        --primary-color: #4caf50;
+      }
+
+      body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 20px;
+        text-align: center;
+        transition: background-color 0.3s, color 0.3s;
+      }
+
+      h1 {
+        font-size: 2.5em;
+        margin-bottom: 30px;
+      }
+
+      .header-button {
+        position: absolute;
+        top: 20px;
+        padding: 10px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        background-color: var(--primary-color);
+        color: white;
+      }
+
+      #home-button {
+        right: 70px;
+        cursor: pointer;
+      }
+      #theme-toggle {
+        right: 20px;
+      }
+
+      #streak {
+        font-size: 18px;
+        margin-bottom: 20px;
+      }
+      #square {
+        font-size: 36px;
+        margin: 40px 0 20px;
+      }
+
+      .button-container {
+        display: flex;
+        gap: 20px;
+        max-width: 800px;
+        margin: 0 auto;
+      }
+
+      .answer-button {
+        flex: 1;
+        font-size: 24px;
+        padding: 20px;
+        cursor: pointer;
+        border: none;
+        border-radius: 8px;
+      }
+
+      #white-button {
+        background-color: var(--light-square);
+        color: #000;
+      }
+
+      #black-button {
+        background-color: var(--dark-square);
+        color: #fff;
+      }
+
+      .audio-player {
+        display: none;
+      }
+
+      body.dark-mode {
+        background-color: #222;
+        color: #fff;
+      }
+
+      body.dark-mode .header-button {
+        background-color: #666;
+      }
+
+      #heatmap {
+        display: grid;
+        grid-template-columns: repeat(8, 50px);
+        gap: 0;
+        margin: 20px auto;
+        width: fit-content;
+      }
+
+      .heatmap-square {
+        width: 50px;
+        height: 50px;
+        position: relative;
+        transition: opacity 0.3s;
+      }
+
+      .heatmap-square.highlighted {
+        opacity: 1;
+      }
+      .heatmap-square.dimmed {
+        opacity: 0.3;
+      }
+
+      .time-circle {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+      }
+
+      .tooltip {
+        display: none;
+        position: absolute;
+        background: rgba(0, 0, 0, 0.8);
+        color: white;
+        padding: 5px;
+        border-radius: 4px;
+        font-size: 12px;
+        z-index: 100;
+        white-space: pre-line;
+      }
+
+      .heatmap-square:hover .tooltip {
+        display: block;
+      }
+
+      .practice-button {
+        font-size: 16px;
+        padding: 8px 16px;
+        cursor: pointer;
+        border: none;
+        border-radius: 4px;
+        background-color: var(--primary-color);
+        color: white;
+      }
+
+      #game-container {
+        display: none;
+      }
+
+      #start-menu {
+        max-width: 800px;
+        margin: 0 auto;
+      }
+
+      .modes-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+      }
+
+      .modes-table tr {
+        cursor: pointer;
+      }
+      .modes-table td {
+        padding: 10px;
+        text-align: left;
+      }
+
+      .progress-bar {
+        width: 200px;
+        height: 20px;
+        background-color: #ddd;
+        border-radius: 10px;
+        overflow: hidden;
+      }
+
+      .progress-fill {
+        height: 100%;
+        background-color: var(--primary-color);
+        transition: width 0.3s ease;
+      }
+
+      @media screen and (max-width: 768px) {
+        .button-container {
+          flex-direction: row;
+          height: 80vh;
+          max-width: 100%;
+          gap: 10px;
+        }
+
+        .answer-button {
+          height: 40vh;
+          font-size: 32px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        #streak {
+          font-size: 16px;
+          margin-bottom: 10px;
+        }
+
+        #square {
+          font-size: 24px;
+          margin: 60px 0 15px;
+        }
+
+        #heatmap {
+          grid-template-columns: repeat(8, 30px);
+        }
+
+        .heatmap-square {
+          width: 30px;
+          height: 30px;
+        }
+
+        .time-circle {
+          width: 12px;
+          height: 12px;
+        }
+
+        .modes-table td {
+          padding: 5px;
+          font-size: 14px;
+        }
+
+        .progress-bar {
+          width: 100px;
+        }
+      }
+    </style>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+    />
+  </head>
+  <body>
+    <button id="home-button" class="header-button" onclick="location.reload()">
+      <i class="fas fa-home"></i>
+    </button>
+    <button id="theme-toggle" class="header-button" onclick="toggleTheme()">
+      <i class="fas fa-adjust"></i>
+    </button>
+
+    <h1>Chess Vision Trainer</h1>
+
+    <div id="heatmap"></div>
+
+    <div id="start-menu">
+      <table class="modes-table">
+        <tr
+          onmouseover="highlightSquares('2x2')"
+          onmouseout="resetHighlights()"
+        >
+          <td>Bottom Left 2x2</td>
+          <td>
+            <div class="progress-bar">
+              <div class="progress-fill" id="progress-2x2"></div>
+            </div>
+          </td>
+          <td>
+            <button class="practice-button" onclick="startGame('2x2')">
+              Practice
+            </button>
+          </td>
+        </tr>
+        <tr
+          onmouseover="highlightSquares('first-row')"
+          onmouseout="resetHighlights()"
+        >
+          <td>First Row</td>
+          <td>
+            <div class="progress-bar">
+              <div class="progress-fill" id="progress-first-row"></div>
+            </div>
+          </td>
+          <td>
+            <button class="practice-button" onclick="startGame('first-row')">
+              Practice
+            </button>
+          </td>
+        </tr>
+        <tr
+          onmouseover="highlightSquares('diagonals')"
+          onmouseout="resetHighlights()"
+        >
+          <td>Main Diagonals</td>
+          <td>
+            <div class="progress-bar">
+              <div class="progress-fill" id="progress-diagonals"></div>
+            </div>
+          </td>
+          <td>
+            <button class="practice-button" onclick="startGame('diagonals')">
+              Practice
+            </button>
+          </td>
+        </tr>
+        <tr
+          onmouseover="highlightSquares('last-row')"
+          onmouseout="resetHighlights()"
+        >
+          <td>Last Row</td>
+          <td>
+            <div class="progress-bar">
+              <div class="progress-fill" id="progress-last-row"></div>
+            </div>
+          </td>
+          <td>
+            <button class="practice-button" onclick="startGame('last-row')">
+              Practice
+            </button>
+          </td>
+        </tr>
+        <tr
+          onmouseover="highlightSquares('central-squares')"
+          onmouseout="resetHighlights()"
+        >
+          <td>Central 2x2</td>
+          <td>
+            <div class="progress-bar">
+              <div class="progress-fill" id="progress-central-squares"></div>
+            </div>
+          </td>
+          <td>
+            <button
+              class="practice-button"
+              onclick="startGame('central-squares')"
+            >
+              Practice
+            </button>
+          </td>
+        </tr>
+        <tr
+          onmouseover="highlightSquares('4x4-a1')"
+          onmouseout="resetHighlights()"
+        >
+          <td>Bottom Left Quarter</td>
+          <td>
+            <div class="progress-bar">
+              <div class="progress-fill" id="progress-4x4"></div>
+            </div>
+          </td>
+          <td>
+            <button class="practice-button" onclick="startGame('4x4')">
+              Practice
+            </button>
+          </td>
+        </tr>
+        <tr
+          onmouseover="highlightSquares('4x4-e1')"
+          onmouseout="resetHighlights()"
+        >
+          <td>Bottom Right Quarter</td>
+          <td>
+            <div class="progress-bar">
+              <div class="progress-fill" id="progress-4x4-e1"></div>
+            </div>
+          </td>
+          <td>
+            <button class="practice-button" onclick="startGame('4x4-e1')">
+              Practice
+            </button>
+          </td>
+        </tr>
+        <tr
+          onmouseover="highlightSquares('4x4-a5')"
+          onmouseout="resetHighlights()"
+        >
+          <td>Top Left Quarter</td>
+          <td>
+            <div class="progress-bar">
+              <div class="progress-fill" id="progress-4x4-a5"></div>
+            </div>
+          </td>
+          <td>
+            <button class="practice-button" onclick="startGame('4x4-a5')">
+              Practice
+            </button>
+          </td>
+        </tr>
+        <tr
+          onmouseover="highlightSquares('4x4-e5')"
+          onmouseout="resetHighlights()"
+        >
+          <td>Top Right Quarter</td>
+          <td>
+            <div class="progress-bar">
+              <div class="progress-fill" id="progress-4x4-e5"></div>
+            </div>
+          </td>
+          <td>
+            <button class="practice-button" onclick="startGame('4x4-e5')">
+              Practice
+            </button>
+          </td>
+        </tr>
+        <tr
+          onmouseover="highlightSquares('4x4-c3')"
+          onmouseout="resetHighlights()"
+        >
+          <td>Central Quarter</td>
+          <td>
+            <div class="progress-bar">
+              <div class="progress-fill" id="progress-4x4-c3"></div>
+            </div>
+          </td>
+          <td>
+            <button class="practice-button" onclick="startGame('4x4-c3')">
+              Practice
+            </button>
+          </td>
+        </tr>
+        <tr
+          onmouseover="highlightSquares('all')"
+          onmouseout="resetHighlights()"
+        >
+          <td>Whole Board</td>
+          <td>
+            <div class="progress-bar">
+              <div class="progress-fill" id="progress-all"></div>
+            </div>
+          </td>
+          <td>
+            <button class="practice-button" onclick="startGame('all')">
+              Practice
+            </button>
+          </td>
+        </tr>
+      </table>
+    </div>
+
+    <div id="game-container">
+      <div id="square">Square: a1</div>
+      <div id="streak">Current Streak: 0</div>
+      <div class="button-container">
+        <button
+          id="white-button"
+          class="answer-button"
+          onclick="checkAnswer('w')"
+        >
+          Light (j)
+        </button>
+        <button
+          id="black-button"
+          class="answer-button"
+          onclick="checkAnswer('b')"
+        >
+          Dark (k)
+        </button>
+      </div>
+    </div>
+
+    <audio id="square-audio" class="audio-player"></audio>
+    <audio id="correct-audio" class="audio-player" src="correct.mp3"></audio>
+    <audio
+      id="incorrect-audio"
+      class="audio-player"
+      src="incorrect.mp3"
+    ></audio>
+
+    <script>
+      const state = {
+        currentStreak: 0,
+        prevRow: null,
+        prevCol: null,
+        currentSquare: null,
+        isCurrentWhite: false,
+        startTime: null,
+        gameMode: null,
+      };
+
+      // Theme handling
+      if (localStorage.getItem("darkMode") === "true") {
+        document.body.classList.add("dark-mode");
+      }
+
+      const toggleTheme = () => {
+        document.body.classList.toggle("dark-mode");
+        localStorage.setItem(
+          "darkMode",
+          document.body.classList.contains("dark-mode")
+        );
+      };
+
+      const getRecentTimes = (square) => {
+        const attempts = JSON.parse(
+          localStorage.getItem(`times_${square}`) || "[]"
+        );
+        return attempts
+          .slice(-6)
+          .filter((attempt) => attempt.time <= 20)
+          .map((attempt) => (attempt.correct ? attempt.time : 10));
+      };
+
+      const getValidSquares = (mode) => {
+        const squares = [];
+        const modes = {
+          "2x2": () => generateSquares(0, 2, 0, 2),
+          "4x4-a1": () => generateSquares(0, 4, 0, 4),
+          diagonals: () => {
+            for (let i = 0; i < 8; i++) {
+              squares.push({ row: i, col: i }, { row: 7 - i, col: i });
+            }
+          },
+          "first-row": () => generateSquares(0, 1, 0, 8),
+          "last-row": () => generateSquares(7, 8, 0, 8),
+          "central-squares": () => generateSquares(3, 5, 3, 5),
+          "4x4-e1": () => generateSquares(0, 4, 4, 8),
+          "4x4-a5": () => generateSquares(4, 8, 0, 4),
+          "4x4-e5": () => generateSquares(4, 8, 4, 8),
+          "4x4-c3": () => generateSquares(2, 6, 2, 6),
+          all: () => generateSquares(0, 8, 0, 8),
+        };
+
+        (modes[mode] || modes["all"])();
+        return squares;
+
+        function generateSquares(startRow, endRow, startCol, endCol) {
+          for (let row = startRow; row < endRow; row++) {
+            for (let col = startCol; col < endCol; col++) {
+              squares.push({ row, col });
+            }
+          }
+        }
+      };
+
+      const highlightSquares = (mode) => {
+        const validSquares = getValidSquares(mode);
+        const allSquares = document.querySelectorAll(".heatmap-square");
+        allSquares.forEach((square) => square.classList.add("dimmed"));
+
+        validSquares.forEach(({ row, col }) => {
+          const square = `${String.fromCharCode(97 + col)}${row + 1}`;
+          const element = document.getElementById(`heatmap-${square}`);
+          if (element) {
+            element.classList.remove("dimmed");
+            element.classList.add("highlighted");
+          }
+        });
+      };
+
+      const resetHighlights = () => {
+        const allSquares = document.querySelectorAll(".heatmap-square");
+        allSquares.forEach((square) => {
+          square.classList.remove("dimmed", "highlighted");
+        });
+      };
+
+      const startGame = (mode) => {
+        state.gameMode = mode;
+        document.getElementById("start-menu").style.display = "none";
+        document.getElementById("game-container").style.display = "block";
+        document.getElementById("heatmap").style.display = "none";
+        generateNewSquare();
+      };
+
+      const generateNewSquare = () => {
+        const validSquares = getValidSquares(state.gameMode);
+        const weights = validSquares.map((square) => {
+          const squareName = `${String.fromCharCode(97 + square.col)}${
+            square.row + 1
+          }`;
+          const recentTimes = getRecentTimes(squareName).map(
+            (time) => time + 1
+          );
+          return recentTimes.length
+            ? recentTimes.reduce((a, b) => a + b) / recentTimes.length
+            : 10;
+        });
+
+        let selectedSquare;
+        const totalWeight = weights.reduce((a, b) => a + b);
+        let random = Math.random() * totalWeight;
+
+        // Fix infinite loop by ensuring we select a square even if weights are 0
+        for (let i = 0; i < validSquares.length; i++) {
+          random -= weights[i];
+          if (random <= 0 || i === validSquares.length - 1) {
+            selectedSquare = validSquares[i];
+            break;
+          }
+        }
+
+        // Only check for previous square if we have more than one valid square
+        if (validSquares.length > 1) {
+          while (
+            selectedSquare.row === state.prevRow &&
+            selectedSquare.col === state.prevCol
+          ) {
+            random = Math.random() * totalWeight;
+            for (let i = 0; i < validSquares.length; i++) {
+              random -= weights[i];
+              if (random <= 0 || i === validSquares.length - 1) {
+                selectedSquare = validSquares[i];
+                break;
+              }
+            }
+          }
+        }
+
+        state.prevRow = selectedSquare.row;
+        state.prevCol = selectedSquare.col;
+        state.isCurrentWhite =
+          (selectedSquare.row + selectedSquare.col) % 2 !== 0;
+
+        const square = `${String.fromCharCode(97 + selectedSquare.col)}${
+          selectedSquare.row + 1
+        }`;
+        state.currentSquare = square;
+        document.getElementById("square").textContent = `Square: ${square}`;
+
+        const audio = document.getElementById("square-audio");
+        audio.src = `squares/${square}_trimmed.mp3`;
+        audio.play();
+
+        setTimeout(() => (state.startTime = Date.now()), 1000);
+      };
+
+      const checkAnswer = (answer) => {
+        const correct =
+          (answer === "w" && state.isCurrentWhite) ||
+          (answer === "b" && !state.isCurrentWhite);
+        const timeElapsed = (Date.now() - state.startTime) / 1000;
+
+        state.currentStreak = correct ? state.currentStreak + 1 : 0;
+        document
+          .getElementById(correct ? "correct-audio" : "incorrect-audio")
+          .play();
+        document.getElementById(
+          "streak"
+        ).textContent = `Current Streak: ${state.currentStreak}`;
+
+        const attempts = JSON.parse(
+          localStorage.getItem(`times_${state.currentSquare}`) || "[]"
+        );
+        attempts.push({ time: timeElapsed, correct, timestamp: Date.now() });
+        localStorage.setItem(
+          `times_${state.currentSquare}`,
+          JSON.stringify(attempts)
+        );
+
+        updateHeatmap();
+        updateProgressBars();
+        setTimeout(generateNewSquare, 1000);
+      };
+
+      document.addEventListener("keydown", (event) => {
+        const keyActions = {
+          j: () => checkAnswer("w"),
+          k: () => checkAnswer("b"),
+          Enter: () => !state.gameMode && startGame("4x4"),
+          Escape: () => location.reload(),
+        };
+        keyActions[event.key]?.();
+      });
+
+      // Initialize heatmap
+      const heatmap = document.getElementById("heatmap");
+      for (let row = 7; row >= 0; row--) {
+        for (let col = 0; col < 8; col++) {
+          const square = document.createElement("div");
+          square.className = "heatmap-square";
+          square.id = `heatmap-${String.fromCharCode(97 + col)}${row + 1}`;
+          heatmap.appendChild(square);
+        }
+      }
+
+      const getSquareProgress = (square) => {
+        const recentTimes = getRecentTimes(square);
+        if (!recentTimes.length) return 0;
+
+        const avg = recentTimes.reduce((a, b) => a + b) / recentTimes.length;
+        if (avg <= 1) return 1;
+        if (avg <= 4) return 0.66;
+        if (avg <= 7) return 0.33;
+        return 0;
+      };
+
+      const updateProgressBars = () => {
+        const modes = [
+          "2x2",
+          "first-row",
+          "diagonals",
+          "last-row",
+          "central-squares",
+          "4x4-a1",
+          "4x4-e1",
+          "4x4-a5",
+          "4x4-e5",
+          "4x4-c3",
+          "all",
+        ];
+
+        modes.forEach((mode) => {
+          const squares = getValidSquares(mode);
+          const totalProgress = squares.reduce((sum, square) => {
+            const squareName = `${String.fromCharCode(97 + square.col)}${
+              square.row + 1
+            }`;
+            return sum + getSquareProgress(squareName);
+          }, 0);
+
+          const progressId =
+            mode === "4x4-a1" ? "progress-4x4" : `progress-${mode}`;
+          document.getElementById(progressId).style.width = `${
+            (totalProgress / squares.length) * 100
+          }%`;
+        });
+      };
+
+      const updateHeatmap = () => {
+        for (let row = 0; row < 8; row++) {
+          for (let col = 0; col < 8; col++) {
+            const square = `${String.fromCharCode(97 + col)}${row + 1}`;
+            const squareElement = document.getElementById(`heatmap-${square}`);
+
+            squareElement.style.backgroundColor =
+              (row + col) % 2 === 0 ? "#b58863" : "#f0d9b5";
+            squareElement.innerHTML = "";
+
+            const recentTimes = getRecentTimes(square);
+            if (!recentTimes.length) continue;
+
+            const tooltip = document.createElement("div");
+            tooltip.className = "tooltip";
+            tooltip.textContent =
+              "Last 10 attempts:\n" +
+              recentTimes
+                .map((t) => (t === 10 ? "failed" : t.toFixed(1) + "s"))
+                .join("\n");
+
+            const avg =
+              recentTimes.reduce((a, b) => a + b) / recentTimes.length;
+            const circle = document.createElement("div");
+            circle.className = "time-circle";
+            circle.style.backgroundColor =
+              avg <= 1
+                ? "#00ff00"
+                : avg <= 4
+                ? "#ffff00"
+                : avg <= 7
+                ? "#ff8000"
+                : "#ff0000";
+            circle.style.border = "1px solid #333";
+
+            squareElement.appendChild(circle);
+            squareElement.appendChild(tooltip);
+          }
+        }
+      };
+
+      // Initial updates
+      updateHeatmap();
+      updateProgressBars();
+    </script>
+  </body>
+</html>
