@@ -617,7 +617,7 @@
         document.getElementById("square").textContent = `Square: ${square}`;
 
         const audio = document.getElementById("square-audio");
-        audio.src = `squares/${square}_trimmed.mp3`;
+        audio.src = `squares/${square}.mp3`;
         audio.play();
 
         setTimeout(() => (state.startTime = Date.now()), 1000);
