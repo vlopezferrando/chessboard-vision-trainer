@@ -23,6 +23,10 @@
         margin-bottom: 30px;
       }
 
+      #game-container h1 {
+        display: none;
+      }
+
       .header-button {
         position: absolute;
         top: 20px;
@@ -558,6 +562,7 @@
         document.getElementById("start-menu").style.display = "none";
         document.getElementById("game-container").style.display = "block";
         document.getElementById("heatmap").style.display = "none";
+        document.querySelector("h1").style.display = "none";
         generateNewSquare();
       };
 
